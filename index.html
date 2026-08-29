@@ -7,16 +7,15 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
         body { background: #09090b; color: #f4f4f5; display: flex; height: 100vh; justify-content: center; align-items: center; }
-        .app-container { width: 100%; max-width: 850px; height: 90vh; background: #18181b; border: 1px solid #27272a; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
+        .app-container { width: 100%; max-width: 850px; height: 95vh; background: #18181b; border: 1px solid #27272a; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
         header { padding: 16px; background: #18181b; border-bottom: 1px solid #27272a; display: flex; justify-content: space-between; align-items: center; }
         header h1 { font-size: 1.2rem; color: #38bdf8; }
-        select { background: #27272a; color: white; border: 1px solid #3f3f46; padding: 6px 12px; border-radius: 6px; }
         #chat-box { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: #09090b; }
-        .message { max-width: 80%; padding: 12px 16px; border-radius: 8px; line-height: 1.5; white-space: pre-wrap; }
-        .user { background: #0284c7; align-self: flex-end; }
-        .bot { background: #27272a; align-self: flex-start; border: 1px solid #3f3f46; }
+        .message { max-width: 85%; padding: 12px 16px; border-radius: 8px; line-height: 1.5; font-size: 0.95rem; word-break: break-word; }
+        .user { background: #0284c7; align-self: flex-end; color: white; }
+        .bot { background: #27272a; align-self: flex-start; border: 1px solid #3f3f46; color: #f4f4f5; }
         .input-container { padding: 16px; background: #18181b; display: flex; gap: 10px; }
-        textarea { flex: 1; background: #27272a; border: 1px solid #3f3f46; color: white; padding: 10px; border-radius: 6px; resize: none; height: 45px; outline: none; }
+        textarea { flex: 1; background: #27272a; border: 1px solid #3f3f46; color: white; padding: 10px; border-radius: 6px; resize: none; height: 45px; outline: none; font-size: 0.95rem; }
         button { background: #38bdf8; color: #09090b; border: none; padding: 0 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
@@ -25,12 +24,6 @@
     <div class="app-container">
         <header>
             <h1>DK AI Engine</h1>
-            <select id="model-select">
-                <option value="auto">Smart Router (Auto Select)</option>
-                <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet (Code)</option>
-                <option value="openai/gpt-4o">ChatGPT 4o (General)</option>
-                <option value="perplexity/sonar-reasoning">Perplexity (Web Search)</option>
-            </select>
         </header>
 
         <div id="chat-box"></div>
@@ -45,40 +38,43 @@
         async function sendMessage() {
             let input = document.getElementById("user-input");
             let chatBox = document.getElementById("chat-box");
-            let model = document.getElementById("model-select").value;
             let text = input.value.trim();
 
             if (!text) return;
 
-            chatBox.innerHTML += `<div class="message user">${escapeHtml(text)}</div>`;
+            // Render User Message
+            let userMsg = document.createElement("div");
+            userMsg.className = "message user";
+            userMsg.innerText = text;
+            chatBox.appendChild(userMsg);
+
             input.value = "";
             chatBox.scrollTop = chatBox.scrollHeight;
 
-            let loadingId = "loading-" + Date.now();
-            chatBox.innerHTML += `<div class="message bot" id="${loadingId}">DK AI is thinking...</div>`;
+            // Render Loading Message
+            let loadingMsg = document.createElement("div");
+            loadingMsg.className = "message bot";
+            loadingMsg.innerText = "DK AI is generating response...";
+            chatBox.appendChild(loadingMsg);
             chatBox.scrollTop = chatBox.scrollHeight;
 
             try {
                 let res = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: text, model: model })
+                    body: JSON.stringify({ prompt: text })
                 });
 
                 let data = await res.json();
-                document.getElementById(loadingId).remove();
-                chatBox.innerHTML += `<div class="message bot">${escapeHtml(data.reply)}</div>`;
+                loadingMsg.innerText = data.reply || "No response generated.";
             } catch (err) {
-                document.getElementById(loadingId).remove();
-                chatBox.innerHTML += `<div class="message bot">Connection error.</div>`;
+                loadingMsg.innerText = "Error: Unable to connect to server.";
             }
 
             chatBox.scrollTop = chatBox.scrollHeight;
         }
-
-        function escapeHtml(str) {
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        }
     </script>
 </body>
 </html>
+
+            
