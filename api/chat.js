@@ -9,8 +9,12 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Valid prompt is required.' });
   }
 
-  try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  // Active free-tier models on OpenRouter
+  const PRIMARY_FREE_MODEL = 'openai/gpt-oss-20b:free';
+  const FALLBACK_FREE_MODEL = 'google/gemma-4-31b-it:free';
+
+  async function queryOpenRouter(modelSlug) {
+    return await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -19,12 +23,21 @@ export default async function handler(req, res) {
         'X-Title': 'DK AI Platform'
       },
       body: JSON.stringify({
-        model: 'openrouter/auto',
+        model: modelSlug,
         messages: [{ role: 'user', content: prompt }]
       })
     });
+  }
 
-    const data = await response.json();
+  try {
+    let response = await queryOpenRouter(PRIMARY_FREE_MODEL);
+    let data = await response.json();
+
+    // Fallback if primary free model is temporarily unavailable
+    if (data.error) {
+      response = await queryOpenRouter(FALLBACK_FREE_MODEL);
+      data = await response.json();
+    }
 
     if (data.error) {
       return res.status(200).json({ reply: `API Error: ${data.error.message}` });
