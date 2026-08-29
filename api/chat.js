@@ -9,12 +9,8 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Valid prompt is required.' });
   }
 
-  // Active free model options on OpenRouter
-  const PRIMARY_MODEL = 'google/gemini-2.0-flash-lite-001';
-  const FALLBACK_MODEL = 'deepseek/deepseek-r1:free';
-
-  async function queryOpenRouter(modelName) {
-    return await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -23,21 +19,12 @@ export default async function handler(req, res) {
         'X-Title': 'DK AI Platform'
       },
       body: JSON.stringify({
-        model: modelName,
+        model: 'openrouter/auto',
         messages: [{ role: 'user', content: prompt }]
       })
     });
-  }
 
-  try {
-    let response = await queryOpenRouter(PRIMARY_MODEL);
-    let data = await response.json();
-
-    // Failover trigger to alternative free model if primary model fails
-    if (data.error) {
-      response = await queryOpenRouter(FALLBACK_MODEL);
-      data = await response.json();
-    }
+    const data = await response.json();
 
     if (data.error) {
       return res.status(200).json({ reply: `API Error: ${data.error.message}` });
@@ -53,7 +40,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ reply: `Server Error: ${error.message}` });
   }
 }
-
-
-
-  
