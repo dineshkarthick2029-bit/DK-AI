@@ -3,17 +3,14 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { prompt, model } = req.body;
+  const { prompt } = req.body;
 
   if (!prompt || typeof prompt !== 'string') {
     return res.status(400).json({ error: 'Valid prompt is required.' });
   }
 
-  // Use reliable free models on OpenRouter
-  let selectedModel = 'google/gemini-2.0-flash-001';
-  if (model === 'perplexity/sonar-reasoning') {
-    selectedModel = 'meta-llama/llama-3.3-70b-instruct:free';
-  }
+  // Uses Llama 3.3 70B Free — Guaranteed 100% Free on OpenRouter
+  const FREE_MODEL = 'meta-llama/llama-3.3-70b-instruct:free';
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -25,7 +22,7 @@ export default async function handler(req, res) {
         'X-Title': 'DK AI Platform'
       },
       body: JSON.stringify({
-        model: selectedModel,
+        model: FREE_MODEL,
         messages: [{ role: 'user', content: prompt }]
       })
     });
@@ -33,13 +30,16 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     if (data.error) {
-      return res.status(502).json({ error: data.error.message || 'API Error' });
+      return res.status(200).json({ reply: `API Error: ${data.error.message}` });
     }
 
-    return res.status(200).json({ reply: data.choices[0].message.content });
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      return res.status(200).json({ reply: data.choices[0].message.content });
+    } else {
+      return res.status(200).json({ reply: "Received an empty response from AI model." });
+    }
 
   } catch (error) {
-    return res.status(500).json({ error: 'Server connection error' });
+    return res.status(500).json({ reply: `Server Error: ${error.message}` });
   }
 }
-
